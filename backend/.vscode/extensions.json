@@ -1,0 +1,8 @@
+{
+    "recommendations": [
+      "himanoa.python-autopep8",
+      "graphql.vscode-graphql",
+      "thebenforce.appsync-resolver-autocomplete"
+    ]
+  }
+

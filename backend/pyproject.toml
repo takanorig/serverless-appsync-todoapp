@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "serverless-appsync-todoapp"
+version = "0.1.0"
+description = ""
+authors = ["takanorig <takanorig@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+aws-xray-sdk = "2.8.0"
+
+[tool.poetry.dev-dependencies]
+flake8 = "^3.9.2"
+autopep8 = "^1.5.7"
+pytest = "^6.2.4"
+pytest-cov = "^2.11.1"
+coverage = "^5.5"
+boto3 = "^1.17.70"
+moto = "2.0.6"
+mock = "4.0.3"
+python-jose = "3.2.0"
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"

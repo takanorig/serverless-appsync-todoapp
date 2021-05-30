@@ -1,0 +1,16 @@
+{
+    "name": "serverless-appsync-todoapp",
+    "version": "0.1.0",
+    "description": "",
+    "author": "",
+    "dependencies": {
+      "aws-xray-sdk": "3.3.3"
+    },
+    "devDependencies": {
+      "npm": "^7.13.0",
+      "serverless-prune-plugin": "1.5.0",
+      "serverless-python-requirements": "5.1.0",
+      "serverless-deployment-bucket": "1.5.1",
+      "serverless-appsync-plugin": "1.11.3"
+    }
+}

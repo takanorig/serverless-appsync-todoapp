@@ -1,0 +1,30 @@
+custom: ${file(../customs/${opt:stage, 'dev'}.yml)}
+
+service: todoapp-dynamodb
+
+provider:
+  name: aws
+  stage: ${opt:stage, 'dev'}
+  region: ${self:custom.deployRegion}
+  profile: ${self:custom.profile}
+  deploymentBucket:
+    name: slsdeploy-${self:service}-${self:provider.stage}
+
+plugins:
+  - serverless-deployment-bucket
+
+resources:
+  Resources:
+    # タスク
+    TaskTable:
+      Type: AWS::DynamoDB::Table
+      DeletionPolicy: Retain
+      Properties:
+        TableName: todo
+        AttributeDefinitions:
+          - AttributeName: todo_id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: todo_id
+            KeyType: HASH
+        BillingMode: PAY_PER_REQUEST

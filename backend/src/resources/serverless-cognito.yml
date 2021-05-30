@@ -1,0 +1,162 @@
+custom: ${file(../customs/${opt:stage, 'dev'}.yml)}
+
+service: todoapp-cognito
+
+provider:
+  name: aws
+  stage: ${opt:stage, 'dev'}
+  region: ${self:custom.deployRegion}
+  profile: ${self:custom.profile}
+  deploymentBucket:
+    name: slsdeploy-${self:service}-${self:provider.stage}
+
+plugins:
+  - serverless-deployment-bucket
+
+resources:
+  Resources:
+    # ユーザープール
+    CognitoUserPool:
+      Type: AWS::Cognito::UserPool
+      Properties:
+        UserPoolName: ${self:service}-${self:provider.stage}-pool
+        UsernameAttributes:
+          - "email"
+        AutoVerifiedAttributes:
+          - "email"
+        Policies:
+          PasswordPolicy:
+            MinimumLength: 10
+            RequireUppercase: true
+            RequireLowercase: true
+            RequireNumbers: true
+            RequireSymbols: true
+        AdminCreateUserConfig:
+          AllowAdminCreateUserOnly: false
+          UnusedAccountValidityDays: 7
+        Schema:
+          - Name: email
+            AttributeDataType: String
+            DeveloperOnlyAttribute: false
+            Mutable: false
+            Required: true
+    # アプリクライアント
+    UserPoolClient:
+      Type: AWS::Cognito::UserPoolClient
+      Properties:
+        ClientName: ${self:service}-${self:provider.stage}-client
+        ExplicitAuthFlows:
+          - ALLOW_ADMIN_USER_PASSWORD_AUTH
+          - ALLOW_USER_SRP_AUTH
+          - ALLOW_REFRESH_TOKEN_AUTH
+        GenerateSecret: false
+        RefreshTokenValidity: 1
+        UserPoolId:
+          Ref: CognitoUserPool
+    # IDプール
+    IdentityPool:
+      Type: AWS::Cognito::IdentityPool
+      Properties:
+        IdentityPoolName: ${self:service}-${self:provider.stage}-idpool
+        AllowUnauthenticatedIdentities: false
+        CognitoIdentityProviders:
+          - ClientId:
+              Ref: UserPoolClient
+            ProviderName:
+              Fn::GetAtt:
+                - CognitoUserPool
+                - ProviderName
+    # 認証されていないロールにアタッチするポリシー
+    UnauthenticatedPolicy:
+      Type: AWS::IAM::ManagedPolicy
+      Properties:
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - mobileanalytics:PutEvents
+                - cognito-sync:*
+              Resource:
+                - "*"
+    # 認証されていないロール
+    UnauthenticatedRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action: "sts:AssumeRoleWithWebIdentity"
+              Principal:
+                Federated: cognito-identity.amazonaws.com
+              Condition:
+                StringEquals:
+                  "cognito-identity.amazonaws.com:aud":
+                    Ref: IdentityPool
+                ForAnyValue:StringLike:
+                  "cognito-identity.amazonaws.com:amr": unauthenticated
+        ManagedPolicyArns:
+          - Ref: UnauthenticatedPolicy
+        RoleName:
+          Fn::Join:
+            - ""
+            - - Fn::GetAtt:
+                  - IdentityPool
+                  - Name
+              - Unauth_Role
+    # 認証されたロールにアタッチするポリシー
+    AuthenticatedPolicy:
+      Type: AWS::IAM::ManagedPolicy
+      Properties:
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action:
+                - mobileanalytics:PutEvents
+                - cognito-sync:*
+                - cognito-identity:*
+              Resource:
+                - "*"
+    # 認証されたロール
+    AuthenticatedRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Action: "sts:AssumeRoleWithWebIdentity"
+              Principal:
+                Federated: cognito-identity.amazonaws.com
+              Condition:
+                StringEquals:
+                  "cognito-identity.amazonaws.com:aud":
+                    Ref: IdentityPool
+                ForAnyValue:StringLike:
+                  "cognito-identity.amazonaws.com:amr": authenticated
+        ManagedPolicyArns:
+          - Ref: AuthenticatedPolicy
+        RoleName:
+          Fn::Join:
+            - ""
+            - - Fn::GetAtt:
+                  - IdentityPool
+                  - Name
+              - Auth_Role
+    # IDプールへのロールのアタッチ
+    IdentityPoolRoleAttachment:
+      Type: AWS::Cognito::IdentityPoolRoleAttachment
+      Properties:
+        IdentityPoolId:
+          Ref: IdentityPool
+        Roles:
+          unauthenticated:
+            Fn::GetAtt:
+              - UnauthenticatedRole
+              - Arn
+          authenticated:
+            Fn::GetAtt:
+              - AuthenticatedRole
+              - Arn

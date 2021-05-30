@@ -1,0 +1,17 @@
+deployRegion: us-west-2
+profile: todoapp-dev
+runtime: python3.8
+
+prop:
+  retentionInDays: 3
+  timeout: 30
+  memorySize: 256
+
+# serverless-prune-plugin
+prune:
+  automatic: true
+  number: 3
+
+## Lambda Layer
+layers:
+  - ${cf:cotask-requirements-layer-dev.PythonRequirementsLambdaLayerQualifiedArn}

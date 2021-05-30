@@ -1,0 +1,74 @@
+custom: ${file(../customs/${opt:stage, 'dev'}.yml)}
+
+service: todoapp-todos
+
+provider:
+  name: aws
+  runtime: ${self:custom.runtime}
+  stage: ${opt:stage, 'dev'}
+  region: ${self:custom.deployRegion}
+  profile: ${self:custom.profile}
+  logRetentionInDays: ${self:custom.prop.retentionInDays}
+  lambdaHashingVersion: 20201221
+  deploymentBucket:
+    name: slsdeploy-${self:service}-${self:provider.stage}
+  apiGateway:
+    shouldStartNameWithService: true
+  timeout: ${self:custom.prop.timeout}
+  memorySize: ${self:custom.prop.memorySize}
+  logs:
+    restApi:
+      accessLogging: true
+      executionLogging: true
+      level: ERROR
+    httpApi: true
+  tracing:
+    apiGateway: true
+    lambda: true
+  iam:
+    role:
+      statements:
+        # ★PJに合わせて変更
+        - Effect: 'Allow'
+          Action:
+            - "xray:PutTraceSegments"
+            - "xray:PutTelemetryRecords"
+            - "dynamodb:GetItem"
+            - "dynamodb:PutItem"
+            - "dynamodb:UpdateItem"
+            - "dynamodb:DeleteItem"
+            - "dynamodb:Query"
+            - "dynamodb:Scan"
+          Resource: '*'
+  environment:
+    REGION: ${self:custom.deployRegion}
+
+package:
+  patterns:
+    - '../common/**'
+    - '!tests/**'
+    - '!nosetests.xml'
+    - '!coverage.xml'
+    - '!nose.cfg'
+    - '!.coverage'
+
+plugins:
+  - serverless-prune-plugin
+  - serverless-deployment-bucket
+
+functions:
+  findTodoList:
+    handler: todo_handler.find_todolist_handler
+    layers: ${self:custom.layers}
+  findTodo:
+    handler: todo_handler.find_todo_handler
+    layers: ${self:custom.layers}
+  addTodo:
+    handler: todo_handler.add_todo_handler
+    layers: ${self:custom.layers}
+  updateTodo:
+    handler: todo_handler.update_todo_handler
+    layers: ${self:custom.layers}
+  deleteTodo:
+    handler: todo_handler.delete_todo_handler
+    layers: ${self:custom.layers}
