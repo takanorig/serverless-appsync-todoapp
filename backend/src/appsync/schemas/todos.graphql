@@ -1,0 +1,31 @@
+type Todo {
+  todo_id: ID!
+  title: String!
+  description: String
+  status: String
+  created_at: AWSDateTime
+  updated_at: AWSDateTime
+}
+
+type TodoList {
+  todos: [Todo]
+  next_token: String
+}
+
+type Query {
+  listTodos(limit: Int, next_token: String): TodoList
+  getTodo(todo_id: ID!): Todo
+}
+
+type Mutation {
+  addTodo(todo: TodoInput!): Todo
+  updateTodo(todo: TodoInput!): Todo
+  deleteTodo(todo_id: ID!): Boolean
+}
+
+input TodoInput {
+  todo_id: ID
+  title: String
+  description: String
+  status: String
+}

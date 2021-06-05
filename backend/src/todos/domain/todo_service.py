@@ -49,8 +49,9 @@ class TodoService:
 
         todo = {
             'todo_id': todo_id,
-            'title': item['title'],
-            'description': item['description'],
+            'title': item.get('title'),
+            'description': item.get('description'),
+            'status': 'open',
             'created_at': timestamp_util.isoformat(now),
             'updated_at': timestamp_util.isoformat(now),
         }

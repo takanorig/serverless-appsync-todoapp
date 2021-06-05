@@ -1,0 +1,83 @@
+- name: "todoapp-endpoint-${opt:stage, 'dev'}"
+  authenticationType: AMAZON_COGNITO_USER_POOLS
+  schema:
+    - ./schemas/todos.graphql
+  userPoolConfig:
+    defaultAction: ALLOW
+    awsRegion: ${self:custom.deployRegion}
+    userPoolId: ${self:custom.cognito.userPoolId}
+  # caching:
+  #   behavior: FULL_REQUEST_CACHING
+  #   ttl: 3600
+  #   atRestEncryption:
+  #   transitEncryption:
+  #   type: "T2_SMALL"
+  # logConfig:
+  #   loggingRoleArn: { Fn::GetAtt: [AppSyncLoggingServiceRole, Arn] }
+  #   level: ERROR
+  #   excludeVerboseContent: false
+  defaultMappingTemplates:
+    request: false
+    response: false
+  mappingTemplatesLocation: ./mapping-templates
+  # クエリ／リゾルバー
+  mappingTemplates:
+    # タスク情報を複数件取得する
+    - dataSource: findTodolistFn
+      type: Query
+      field: listTodos
+    # タスク情報を1件取得する
+    - dataSource: findTodoFn
+      type: Query
+      field: getTodo
+    # タスクを登録する
+    - dataSource: addTodoFn
+      type: Mutation
+      field: addTodo
+    # タスクを更新する
+    - dataSource: updateTodoFn
+      type: Mutation
+      field: updateTodo
+    # タスクを削除する
+    - dataSource: deleteTodoFn
+      type: Mutation
+      field: deleteTodo
+  # データソース
+  dataSources:
+    - type: AMAZON_DYNAMODB
+      name: todoTable
+      description: TODO
+      config:
+        tableName: todo
+        serviceRoleArn: { Fn::GetAtt: [AppSyncDynamoDBServiceRole, Arn] }
+    - type: AWS_LAMBDA
+      name: findTodolistFn
+      config:
+        # lambdaFunctionArn: ${cf:todoapp-todos-dev.FindTodoListLambdaFunctionQualifiedArn}
+        lambdaFunctionArn: arn:aws:lambda:${self:custom.deployRegion}:${self:custom.accountId}:function:todoapp-todos-${opt:stage, 'dev'}-findTodoList
+        serviceRoleArn: { Fn::GetAtt: [AppSyncLambdaServiceRole, Arn] }
+    - type: AWS_LAMBDA
+      name: findTodoFn
+      config:
+        # lambdaFunctionArn: ${cf:todoapp-todos-dev.FindTodoLambdaFunctionQualifiedArn}
+        lambdaFunctionArn: arn:aws:lambda:${self:custom.deployRegion}:${self:custom.accountId}:function:todoapp-todos-${opt:stage, 'dev'}-findTodo
+        serviceRoleArn: { Fn::GetAtt: [AppSyncLambdaServiceRole, Arn] }
+    - type: AWS_LAMBDA
+      name: addTodoFn
+      config:
+        # lambdaFunctionArn: ${cf:todoapp-todos-dev.AddTodoLambdaFunctionQualifiedArn}
+        lambdaFunctionArn: arn:aws:lambda:${self:custom.deployRegion}:${self:custom.accountId}:function:todoapp-todos-${opt:stage, 'dev'}-addTodo
+        serviceRoleArn: { Fn::GetAtt: [AppSyncLambdaServiceRole, Arn] }
+    - type: AWS_LAMBDA
+      name: updateTodoFn
+      config:
+        # lambdaFunctionArn: ${cf:todoapp-todos-dev.UpdateTodoLambdaFunctionQualifiedArn}
+        lambdaFunctionArn: arn:aws:lambda:${self:custom.deployRegion}:${self:custom.accountId}:function:todoapp-todos-${opt:stage, 'dev'}-updateTodo
+        serviceRoleArn: { Fn::GetAtt: [AppSyncLambdaServiceRole, Arn] }
+    - type: AWS_LAMBDA
+      name: deleteTodoFn
+      config:
+        # lambdaFunctionArn: ${cf:todoapp-todos-dev.DeleteTodoLambdaFunctionQualifiedArn}
+        lambdaFunctionArn: arn:aws:lambda:${self:custom.deployRegion}:${self:custom.accountId}:function:todoapp-todos-${opt:stage, 'dev'}-deleteTodo
+        serviceRoleArn: { Fn::GetAtt: [AppSyncLambdaServiceRole, Arn] }
+  xrayEnabled: true

@@ -279,3 +279,7 @@ Thumbs.db
 .serverless
 
 # End of https://www.toptal.com/developers/gitignore/api/python,node,serverless
+
+
+cognito-settings-dev.yml
+cognito-settings-prod.yml

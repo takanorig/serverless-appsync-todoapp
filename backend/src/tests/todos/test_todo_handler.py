@@ -29,7 +29,8 @@ class TestTodoHandler(unittest.TestCase):
         event = appsync_testutil.create_event(args=args, auth=auth)
 
         # Execute
-        actual_todolist = todo_handler.find_todolist_handler(event, None)
+        response = todo_handler.find_todolist_handler(event, None)
+        actual_todolist = response.get('todos')
 
         # Assert
         self.assertEqual(3, len(actual_todolist))
@@ -72,8 +73,10 @@ class TestTodoHandler(unittest.TestCase):
     def test_add_todo_handler__normal(self):
         # Prepare
         args = {
-            'title': 'Add todo test',
-            'description': 'Add example',
+            'todo': {
+                'title': 'Add todo test',
+                'description': 'Add example',
+            }
         }
         auth = {
             'email': 'test_add@example.com'
@@ -85,8 +88,9 @@ class TestTodoHandler(unittest.TestCase):
 
         # Assert
         self.assertEqual(4, UUID(actual_todo['todo_id']).version)
-        self.assertEqual(args['title'], actual_todo['title'])
-        self.assertEqual(args['description'], actual_todo['description'])
+        self.assertEqual(args['todo']['title'], actual_todo['title'])
+        self.assertEqual(args['todo']['description'], actual_todo['description'])
+        self.assertEqual('open', actual_todo['status'])
         self.assertIsNotNone(actual_todo['created_at'])
         self.assertIsNotNone(actual_todo['updated_at'])
         self.assertEqual(actual_todo['created_at'], actual_todo['updated_at'])
@@ -96,8 +100,10 @@ class TestTodoHandler(unittest.TestCase):
         todolist = self.__test_setup.get_todolist()
         todo = todolist[0]
         args = {
-            'todo_id': todo['todo_id'],
-            'title': 'Update todo test'
+            'todo': {
+                'todo_id': todo['todo_id'],
+                'title': 'Update todo test',
+            }
         }
         auth = {
             'email': 'test_add@example.com'
@@ -108,8 +114,8 @@ class TestTodoHandler(unittest.TestCase):
         actual_todo = todo_handler.update_todo_handler(event, None)
 
         # Assert
-        self.assertEqual(args['todo_id'], actual_todo['todo_id'])
-        self.assertEqual(args['title'], actual_todo['title'])
+        self.assertEqual(args['todo']['todo_id'], actual_todo['todo_id'])
+        self.assertEqual(args['todo']['title'], actual_todo['title'])
         self.assertIsNotNone(actual_todo['description'])
         self.assertIsNotNone(actual_todo['created_at'])
         self.assertIsNotNone(actual_todo['updated_at'])
@@ -119,8 +125,10 @@ class TestTodoHandler(unittest.TestCase):
         with self.assertRaises(ValueError):
             # Prepare
             args = {
-                'todo_id': 'dummy',
-                'title': 'Update todo test'
+                'todo': {
+                    'todo_id': 'dummy',
+                    'title': 'Update todo test',
+                }
             }
             auth = {
                 'email': 'test_add@example.com'
@@ -147,7 +155,8 @@ class TestTodoHandler(unittest.TestCase):
 
         # Execute
         todo_handler.delete_todo_handler(event, None)
-        post_todolist = todo_handler.find_todolist_handler(event, None)
+        todolist_response = todo_handler.find_todolist_handler(event, None)
+        post_todolist = todolist_response.get('todos')
 
         # Assert
         self.assertEqual(3, len(pre_todolist))
