@@ -36,7 +36,8 @@ class TodoTestSetup():
         for index in range(3):
             todo_id = str(uuid.uuid4())
             todo_title = 'TODO #' + str(index + 1)
-            self._add_todo(todo_id, todo_title)
+            todo_assignee = 'user' + str(index + 1) + '@example.com'
+            self._add_todo(todo_id, todo_title, todo_assignee)
 
     def delete_dynamodb_table(self):
         self.__dynamodb.Table('todo').delete()
@@ -44,7 +45,7 @@ class TodoTestSetup():
     def get_todolist(self):
         return self.__todolist
 
-    def _add_todo(self, todo_id, todo_title):
+    def _add_todo(self, todo_id, todo_title, todo_assignee):
         todo_table = self.__dynamodb.Table('todo')
 
         now = datetime.now(tz=timezone.utc)
@@ -53,6 +54,7 @@ class TodoTestSetup():
             'title': todo_title,
             'description': 'Todo content.',
             'status': 'open',
+            'assignee': todo_assignee,
             'created_at': timestamp_util.isoformat(now),
             'updated_at': timestamp_util.isoformat(now),
         }
