@@ -1,0 +1,14 @@
+deployRegion: us-west-2
+accountId: ${opt:accountId, ''}
+profile: todoapp-dev
+
+appSync: ${file(../appsync/appsync.yml)}
+
+# Cognito
+# cognito:
+#   userPoolId: us-west-2_XXXXXXXXXX
+#   clientId: XXXXXXXXXXXXXXXXXXX
+#   authorizer:
+#     name: todoapp-authorizer
+#     arn: arn:aws:cognito-idp:{self:deployRegion}:{self:accountId}:userpool/uus-west-2_XXXXXXXXXX
+cognito: ${file(../customs/cognito-settings-dev.yml)}

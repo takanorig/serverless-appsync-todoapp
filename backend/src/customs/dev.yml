@@ -12,6 +12,9 @@ prune:
   automatic: true
   number: 3
 
-## Lambda Layer
+# Lambda Layer
 layers:
-  - ${cf:cotask-requirements-layer-dev.PythonRequirementsLambdaLayerQualifiedArn}
+  - ${cf:todoapp-requirements-layer-dev.PythonRequirementsLambdaLayerQualifiedArn}
+
+# Cognito
+cognito: ${file(../customs/cognito-settings-dev.yml)}

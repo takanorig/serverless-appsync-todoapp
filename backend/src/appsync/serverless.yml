@@ -1,0 +1,73 @@
+custom: ${file(../customs/appsync-${opt:stage, 'dev'}.yml)}
+
+service: todoapp-appsync
+
+provider:
+  name: aws
+  stage: ${opt:stage, 'dev'}
+  region: ${self:custom.deployRegion}
+  profile: ${self:custom.profile}
+  deploymentBucket:
+    name: slsdeploy-${self:service}-${self:provider.stage}
+
+plugins:
+  - serverless-deployment-bucket
+  - serverless-appsync-plugin
+
+resources:
+  Resources:
+    # AppSync が DynamoDB を操作するためのロール
+    AppSyncDynamoDBServiceRole:
+      Type: "AWS::IAM::Role"
+      Properties:
+        RoleName: ${self:service}-dynamodb-role-${opt:stage, self:provider.stage}
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: "Allow"
+              Principal:
+                Service:
+                  - "appsync.amazonaws.com"
+              Action:
+                - "sts:AssumeRole"
+        Policies:
+          - PolicyName: "${self:service}-dynamo-policy-${opt:stage, self:provider.stage}"
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: "Allow"
+                  Action:
+                    - "dynamodb:GetItem"
+                    - "dynamodb:PutItem"
+                    - "dynamodb:UpdateItem"
+                    - "dynamodb:DeleteItem"
+                    - "dynamodb:BatchGetItem"
+                    - "dynamodb:BatchWriteItem"
+                    - "dynamodb:Query"
+                    # - "dynamodb:Scan"
+                  Resource:
+                    - "*"
+    # AppSync が Lambda を操作するためのロール
+    AppSyncLambdaServiceRole:
+      Type: "AWS::IAM::Role"
+      Properties:
+        RoleName: ${self:service}-lambda-role-${opt:stage, self:provider.stage}
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: "Allow"
+              Principal:
+                Service:
+                  - "appsync.amazonaws.com"
+              Action:
+                - "sts:AssumeRole"
+        Policies:
+          - PolicyName: "${self:service}-lambda-policy-${opt:stage, self:provider.stage}"
+            PolicyDocument:
+              Version: "2012-10-17"
+              Statement:
+                - Effect: "Allow"
+                  Action:
+                    - "lambda:invokeFunction"
+                  Resource:
+                    - "*"

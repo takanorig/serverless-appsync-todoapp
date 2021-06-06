@@ -1,12 +1,17 @@
 import logging
+import os
 import uuid
 from datetime import datetime, timezone
 
 import boto3
+from boto3.dynamodb.conditions import And, Attr
 from common import timestamp_util
+from common.appsync_util import FilterInput
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+MAX_ITEMS = int(os.getenv('MAX_ITEMS', '1000'))
 
 
 class TodoService:
@@ -18,18 +23,51 @@ class TodoService:
         self.__dynamodb = boto3.resource('dynamodb')
         self.__todo_table = self.__dynamodb.Table('todo')
 
-    def find_todolist(self):
+    def find_todolist(self, filters: [FilterInput] = None, next_token: str = None):
         """
         登録されているタスクを全て取得する。
         DynamoDBのscanを行うため、パフォーマンスに注意。
         """
-        response = self.__todo_table.scan()
+        option = {}
+
+        # FilterExpression
+        if (filters is not None) and (len(filters) > 0):
+            # FilterExpression を動的に生成
+            filter_options = []
+            for filter in filters:
+                condition_fn = getattr(Attr(filter.attr), filter.condition)
+                condition_value = filter.value
+                if (condition_value is not None) and (condition_value.strip() == ''):
+                    condition_value = None
+                filter_exp = condition_fn(filter.value)
+                filter_options.append(filter_exp)
+
+            # And 条件で結合
+            if (len(filter_options) > 1):
+                option['FilterExpression'] = And(*filter_options)
+            else:
+                option['FilterExpression'] = filter_options[0]
+
+        # ExclusiveStartKey
+        if next_token is not None:
+            option['ExclusiveStartKey'] = next_token
+
+        # MAX件数を超えるまで繰り返し取得
+        response = self.__todo_table.scan(**option)
         todolist = response.get('Items')
+        while 'LastEvaluatedKey' in response:
+            next_token = response.get('LastEvaluatedKey')
+            tmp_option = dict(**option, **{'ExclusiveStartKey': next_token})
+            response = self.__todo_table.scan(**tmp_option)
+            todolist.extend(response.get('Items'))
+
+            if len(todolist) > MAX_ITEMS:
+                break
 
         if todolist is None:
             todolist = []
 
-        return todolist
+        return todolist, next_token
 
     def find_todo(self, todo_id: str):
         """
@@ -49,8 +87,10 @@ class TodoService:
 
         todo = {
             'todo_id': todo_id,
-            'title': item['title'],
-            'description': item['description'],
+            'title': item.get('title'),
+            'description': item.get('description'),
+            'status': 'open',
+            'assignee': None,
             'created_at': timestamp_util.isoformat(now),
             'updated_at': timestamp_util.isoformat(now),
         }
@@ -81,6 +121,15 @@ class TodoService:
         """
         指定されたIDのタスクを削除する。
         """
-        self.__todo_table.delete_item(Key={'todo_id': todo_id})
+        response = self.__todo_table.delete_item(
+            Key={'todo_id': todo_id},
+            ReturnValues='ALL_OLD'
+        )
 
-        return
+        attr = response.get('Attributes', {})
+        if attr.get('todo_id') is not None:
+            deleted = True
+        else:
+            deleted = False
+
+        return deleted
